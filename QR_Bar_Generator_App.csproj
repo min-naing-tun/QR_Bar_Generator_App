@@ -8,9 +8,13 @@
 
   <ItemGroup>
     <Folder Include="Models\DbModels\" />
-    <Folder Include="Models\ViewModels\" />
     <Folder Include="wwwroot\assets\bar\" />
     <Folder Include="wwwroot\assets\qr\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZXing.Net" Version="0.16.10" />
+    <PackageReference Include="ZXing.Net.Bindings.CoreCompat.System.Drawing" Version="0.16.5-beta" />
   </ItemGroup>
 
 </Project>

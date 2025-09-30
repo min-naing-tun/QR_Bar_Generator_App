@@ -1,0 +1,43 @@
+﻿@using QR_Bar_Generator_App.Models.ViewModels;
+@model QR_Bar_Generator_App.Models.ViewModels.UploadFormViewModel;
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h4 class="mb-4 text-center">Decode QR or Barcode</h4>
+
+                    <form method="post" enctype="multipart/form-data" autocomplete="off">
+                        <div class="mb-3">
+                            <label for="codeType" class="form-label">Type</label>
+                            <select class="form-select" id="codeType" name="codeType" asp-for="codeType" asp-items="Html.GetEnumSelectList<CodeType>()" required></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="UploadFile" class="form-label">Upload Image</label>
+                            <input type="file" class="form-control" id="UploadFile" name="UploadFile" asp-for="uploadFile" accept="image/*" required />
+                        </div>
+
+                        @if (Model != null && !string.IsNullOrEmpty(Model.decodedText))
+                        {
+                            <hr class="my-4" />
+                            <div class="alert alert-info">
+                                <strong>Decoded Result:</strong>
+                                <p>@Model.decodedText</p>
+                            </div>
+                        }
+
+                        <div style="justify-items: center;">
+                            <hr class="w-100" />
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Decode</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

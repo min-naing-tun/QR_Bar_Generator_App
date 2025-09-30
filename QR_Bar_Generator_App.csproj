@@ -9,6 +9,7 @@
   <ItemGroup>
     <Folder Include="Models\DbModels\" />
     <Folder Include="wwwroot\assets\bar\" />
+    <Folder Include="wwwroot\assets\upload\" />
     <Folder Include="wwwroot\assets\qr\" />
   </ItemGroup>
 

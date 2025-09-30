@@ -4,6 +4,7 @@ using QR_Bar_Generator_App.Models;
 using QR_Bar_Generator_App.Models.ViewModels;
 using System.Diagnostics;
 using System.Net;
+using ZXing;
 using ZXing.QrCode;
 
 namespace QR_Bar_Generator_App.Controllers
@@ -41,7 +42,7 @@ namespace QR_Bar_Generator_App.Controllers
 
             if (ModelState.IsValid) 
             {
-                if (model.codeType.ToString().ToLower() == "qr")
+                if (model.codeType.ToString()!.ToLower() == "qr")
                 {
                     // ----------------- QR Code Session -----------------
                     var width = 150; // width of the QR Code
@@ -133,6 +134,69 @@ namespace QR_Bar_Generator_App.Controllers
                         }
                     }
                 }
+            }
+
+            return View(model);
+        }
+
+        public IActionResult Upload()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Upload(UploadFormViewModel model)
+        {
+            //user ip session
+            string? ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            // If it's IPv6 localhost, convert to IPv4
+            if (ipAddress == "::1")
+            {
+                ipAddress = Dns.GetHostEntry(Dns.GetHostName())
+                               .AddressList
+                               .FirstOrDefault(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)?
+                               .ToString();
+            }
+
+            if (model.uploadFile != null && model.uploadFile.Length > 0)
+            {
+                // Save uploaded image
+                string folderPath = Path.Combine(_env.WebRootPath, "assets", "upload");
+                if (!Directory.Exists(folderPath))
+                    Directory.CreateDirectory(folderPath);
+
+                string filePath = Path.Combine(folderPath, Path.GetFileName(model.uploadFile.FileName));
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.uploadFile.CopyToAsync(stream);
+                }
+
+                // Decode
+                var barcodeReader = new BarcodeReaderGeneric
+                {
+                    AutoRotate = true,
+                    Options = new ZXing.Common.DecodingOptions
+                    {
+                        TryHarder = true,
+                        PossibleFormats = model.codeType.ToString()!.ToLower() == "qr"
+                            ? new List<BarcodeFormat> { BarcodeFormat.QR_CODE }
+                            : new List<BarcodeFormat> { BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.EAN_13 }
+                    }
+                };
+
+                using (var bitmap = new System.Drawing.Bitmap(filePath))
+                {
+                    var result = barcodeReader.Decode(bitmap);
+                    model.decodedText = result?.Text ?? "Could not decode the image.";
+                }
+
+                // Delete temp file after decoding
+                //System.IO.File.Delete(filePath);
+            }
+            else
+            {
+                ModelState.AddModelError("", "Please upload an image file.");
             }
 
             return View(model);

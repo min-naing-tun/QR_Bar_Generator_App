@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using QR_Bar_Generator_App.Models;
 using QR_Bar_Generator_App.Models.ViewModels;
 using System.Diagnostics;
+using System.Net;
 using ZXing.QrCode;
 
 namespace QR_Bar_Generator_App.Controllers
@@ -27,35 +28,49 @@ namespace QR_Bar_Generator_App.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Index(InputFormViewModel model)
         {
+            //user ip session
+            string? ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            // If it's IPv6 localhost, convert to IPv4
+            if (ipAddress == "::1")
+            {
+                ipAddress = Dns.GetHostEntry(Dns.GetHostName())
+                               .AddressList
+                               .FirstOrDefault(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)?
+                               .ToString();
+            }
+
             if (ModelState.IsValid) 
             {
-                if(model.codeType.ToString() == "qr")
+                if (model.codeType.ToString().ToLower() == "qr")
                 {
-                    //qr code session
+                    // ----------------- QR Code Session -----------------
                     var width = 150; // width of the QR Code
                     var height = 150; // height of the QR Code
                     var margin = 0;
-                    // BarcodeWriterPixelData acts as a QR code generator
+
                     var qrCodeWriter = new ZXing.BarcodeWriterPixelData
                     {
                         Format = ZXing.BarcodeFormat.QR_CODE,
-                        Options = new QrCodeEncodingOptions
+                        Options = new ZXing.QrCode.QrCodeEncodingOptions
                         {
                             Height = height,
                             Width = width,
                             Margin = margin
                         }
                     };
+
                     var pixelData = qrCodeWriter.Write(model.inputData);
-                    // creating a PNG bitmap from the raw pixel data; if only black and white colors are used it makes no difference if the raw pixel data is BGRA oriented and the bitmap is initialized with RGB
+
                     using (var bitmap = new System.Drawing.Bitmap(pixelData.Width, pixelData.Height, System.Drawing.Imaging.PixelFormat.Format32bppRgb))
                     {
                         using (var ms = new MemoryStream())
                         {
-                            var bitmapData = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, pixelData.Width, pixelData.Height), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+                            var bitmapData = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, pixelData.Width, pixelData.Height),
+                                System.Drawing.Imaging.ImageLockMode.WriteOnly,
+                                System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+
                             try
                             {
-                                // we assume that the row stride of the bitmap is aligned to 4 byte multiplied by the width of the image
                                 System.Runtime.InteropServices.Marshal.Copy(pixelData.Pixels, 0, bitmapData.Scan0, pixelData.Pixels.Length);
                             }
                             finally
@@ -63,26 +78,60 @@ namespace QR_Bar_Generator_App.Controllers
                                 bitmap.UnlockBits(bitmapData);
                             }
 
-                            // Generate unique filename
-                            string fileGuid = Guid.NewGuid().ToString();
                             string folderPath = Path.Combine(_env.WebRootPath, "assets", "qr");
-                            string filePath = Path.Combine(folderPath, $"file-{fileGuid}.png");
+                            string filePath = Path.Combine(folderPath, $"{ipAddress}.png");
 
-                            // Ensure folder exists
                             if (!Directory.Exists(folderPath))
                                 Directory.CreateDirectory(folderPath);
 
-                            // Save as PNG
                             bitmap.Save(filePath, System.Drawing.Imaging.ImageFormat.Png);
-
-                            //update image
-                            model.imageData = $"/assets/qr/file-{fileGuid}.png";
+                            model.imageData = $"/assets/qr/{ipAddress}.png";
                         }
                     }
                 }
                 else
                 {
-                    //bar code session
+                    // ----------------- Barcode Session -----------------
+                    var barcodeWriter = new ZXing.BarcodeWriterPixelData
+                    {
+                        Format = ZXing.BarcodeFormat.CODE_128, // CODE_128 Format only
+                        Options = new ZXing.Common.EncodingOptions
+                        {
+                            Height = 80,   // barcode height
+                            Width = 250,   // barcode width
+                            Margin = 2
+                        }
+                    };
+
+                    var pixelData = barcodeWriter.Write(model.inputData);
+
+                    using (var bitmap = new System.Drawing.Bitmap(pixelData.Width, pixelData.Height, System.Drawing.Imaging.PixelFormat.Format32bppRgb))
+                    {
+                        using (var ms = new MemoryStream())
+                        {
+                            var bitmapData = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, pixelData.Width, pixelData.Height),
+                                System.Drawing.Imaging.ImageLockMode.WriteOnly,
+                                System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+
+                            try
+                            {
+                                System.Runtime.InteropServices.Marshal.Copy(pixelData.Pixels, 0, bitmapData.Scan0, pixelData.Pixels.Length);
+                            }
+                            finally
+                            {
+                                bitmap.UnlockBits(bitmapData);
+                            }
+
+                            string folderPath = Path.Combine(_env.WebRootPath, "assets", "bar");
+                            string filePath = Path.Combine(folderPath, $"{ipAddress}.png");
+
+                            if (!Directory.Exists(folderPath))
+                                Directory.CreateDirectory(folderPath);
+
+                            bitmap.Save(filePath, System.Drawing.Imaging.ImageFormat.Png);
+                            model.imageData = $"/assets/bar/{ipAddress}.png";
+                        }
+                    }
                 }
             }
 

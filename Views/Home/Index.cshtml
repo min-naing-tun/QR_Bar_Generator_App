@@ -22,10 +22,18 @@
                         </div>
                         <div class="mb-4">
                             @{
-                                if(Model != null)
+                                if (Model != null)
                                 {
-                                    <label for="qrImage" class="form-label">QR Image</label><br />
-                                    <img src=@Model.imageData alt="QR image" />
+                                    <label for="qrImage" class="form-label">Generated Image</label>
+                            
+                                    <br />
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="@Model.imageData" alt="Generated code" style="max-width:100px; border:1px solid #ddd; padding:4px;" />
+                                        <br />
+                                        <a href="@Model.imageData" download="@Model.codeType.ToString()!.ToUpper() _ @DateTime.Now.ToString() .png" class="btn btn-success">
+                                            Download
+                                        </a>
+                                    </div>
                                 }
                             }
                         </div>
